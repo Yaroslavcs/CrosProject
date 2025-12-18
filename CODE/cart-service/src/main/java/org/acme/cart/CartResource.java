@@ -1,58 +1,80 @@
 package org.acme.cart;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
+import java.util.Optional;
 
 @Path("/carts")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@ApplicationScoped
 public class CartResource {
 
-    private final CartRepository cartRepository;
+    @Inject
+    CartRepository cartRepository;
 
-    public CartResource(CartRepository cartRepository) {
-        this.cartRepository = cartRepository;
-    }
+    @Inject
+    CartItemRepository cartItemRepository;
 
     @GET
     @Path("/{userId}")
     public Response getCartByUserId(@PathParam("userId") String userId) {
-        Cart cart = cartRepository.getCartByUserId(userId);
-        if (cart != null) {
-            return Response.ok(cart).build();
-        } else {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
+        Optional<Cart> cartOptional = cartRepository.find("userId", userId).firstResultOptional();
+        return cartOptional.map(cart -> Response.ok(cart).build())
+                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
     }
 
     @POST
-    @Path("/{userId}")
-    public Response createCart(@PathParam("userId") String userId) {
-        Cart cart = cartRepository.createCart(userId);
+    @Transactional
+    public Response createCart(@QueryParam("userId") String userId) {
+        if (userId == null || userId.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("User ID cannot be empty").build();
+        }
+        Optional<Cart> existingCart = cartRepository.find("userId", userId).firstResultOptional();
+        if (existingCart.isPresent()) {
+            return Response.status(Response.Status.CONFLICT).entity("Cart for this user already exists").build();
+        }
+
+        Cart cart = new Cart();
+        cart.userId = userId;
+        cartRepository.persist(cart);
         return Response.status(Response.Status.CREATED).entity(cart).build();
     }
 
     @PUT
     @Path("/{userId}/items")
-    public Response updateCartItems(@PathParam("userId") String userId, List<CartItem> items) {
-        Cart cart = cartRepository.getCartByUserId(userId);
-        if (cart != null) {
-            cart.setItems(items);
-            cartRepository.updateCart(cart);
-            return Response.ok(cart).build();
-        } else {
+    @Transactional
+    public Response updateCartItems(@PathParam("userId") String userId, List<CartItem> newItems) {
+        Optional<Cart> cartOptional = cartRepository.find("userId", userId).firstResultOptional();
+        if (cartOptional.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
+
+        Cart cart = cartOptional.get();
+        cart.items.forEach(cartItemRepository::delete);
+        cart.items.clear();
+
+        newItems.forEach(item -> {
+            item.cart = cart;
+            cart.items.add(item);
+            cartItemRepository.persist(item);
+        });
+
+        cartRepository.persist(cart);
+        return Response.ok(cart).build();
     }
 
     @DELETE
     @Path("/{userId}")
+    @Transactional
     public Response deleteCart(@PathParam("userId") String userId) {
-        Cart cart = cartRepository.getCartByUserId(userId);
-        if (cart != null) {
-            cartRepository.deleteCart(userId);
+        Long deletedCount = cartRepository.delete("userId", userId);
+        if (deletedCount > 0) {
             return Response.noContent().build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).build();

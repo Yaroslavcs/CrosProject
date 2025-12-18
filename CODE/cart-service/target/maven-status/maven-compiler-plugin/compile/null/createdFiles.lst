@@ -1,0 +1,5 @@
+org\acme\cart\Cart.class
+org\acme\cart\CartItem.class
+org\acme\cart\CartItemRepository.class
+org\acme\cart\CartResource.class
+org\acme\cart\CartRepository.class

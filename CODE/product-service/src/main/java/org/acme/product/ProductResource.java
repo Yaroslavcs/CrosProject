@@ -1,30 +1,30 @@
 package org.acme.product;
 
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.util.Set;
+
+import java.util.List;
 
 @Path("/products")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ProductResource {
 
-    private final ProductRepository productRepository;
-
-    public ProductResource(ProductRepository productRepository) {
-        this.productRepository = productRepository;
-    }
+    @Inject
+    ProductRepository productRepository;
 
     @GET
-    public Set<Product> getAllProducts() {
-        return productRepository.getAllProducts();
+    public List<Product> getAllProducts() {
+        return productRepository.listAll();
     }
 
     @GET
     @Path("/{id}")
-    public Response getProductById(@PathParam("id") String id) {
-        Product product = productRepository.getProductById(id);
+    public Response getProductById(@PathParam("id") Long id) {
+        Product product = productRepository.findById(id);
         if (product != null) {
             return Response.ok(product).build();
         } else {
@@ -33,19 +33,24 @@ public class ProductResource {
     }
 
     @POST
+    @Transactional
     public Response addProduct(Product product) {
-        productRepository.addProduct(product);
+        productRepository.persist(product);
         return Response.status(Response.Status.CREATED).entity(product).build();
     }
 
     @PUT
     @Path("/{id}")
-    public Response updateProduct(@PathParam("id") String id, Product product) {
-        Product existingProduct = productRepository.getProductById(id);
+    @Transactional
+    public Response updateProduct(@PathParam("id") Long id, Product product) {
+        Product existingProduct = productRepository.findById(id);
         if (existingProduct != null) {
-            product.setId(id);
-            productRepository.updateProduct(product);
-            return Response.ok(product).build();
+            existingProduct.name = product.name;
+            existingProduct.description = product.description;
+            existingProduct.price = product.price;
+            existingProduct.availableItems = product.availableItems;
+            productRepository.persist(existingProduct);
+            return Response.ok(existingProduct).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
@@ -53,10 +58,10 @@ public class ProductResource {
 
     @DELETE
     @Path("/{id}")
-    public Response deleteProduct(@PathParam("id") String id) {
-        Product existingProduct = productRepository.getProductById(id);
-        if (existingProduct != null) {
-            productRepository.deleteProduct(id);
+    @Transactional
+    public Response deleteProduct(@PathParam("id") Long id) {
+        boolean deleted = productRepository.deleteById(id);
+        if (deleted) {
             return Response.noContent().build();
         } else {
             return Response.status(Response.Status.NOT_FOUND).build();
