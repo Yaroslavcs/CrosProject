@@ -4,12 +4,19 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
+import jakarta.inject.Inject;
 import java.util.List;
 
 @Path("/payments")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class PaymentResource {
+
+    @Inject
+    @Channel("payment-processed")
+    Emitter<PaymentProcessedEvent> paymentProcessedEventEmitter;
 
     @GET
     public List<Payment> getAllPayments() {
@@ -28,6 +35,16 @@ public class PaymentResource {
     @Transactional
     public Response createPayment(Payment payment) {
         payment.persist();
+        payment.setStatus(Payment.PaymentStatus.COMPLETED);
+        PaymentProcessedEvent event = new PaymentProcessedEvent(
+                payment.id,
+                payment.getOrderId(),
+                payment.getUserId(),
+                payment.getAmount(),
+                payment.getPaymentDate(),
+                payment.getStatus()
+        );
+        paymentProcessedEventEmitter.send(event);
         return Response.status(Response.Status.CREATED).entity(payment).build();
     }
 
