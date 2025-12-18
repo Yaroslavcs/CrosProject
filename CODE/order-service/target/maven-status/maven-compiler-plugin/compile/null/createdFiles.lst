@@ -1,0 +1,5 @@
+org\acme\order\Order.class
+org\acme\order\OrderItem.class
+org\acme\order\OrderItemRepository.class
+org\acme\order\OrderResource.class
+org\acme\order\OrderRepository.class

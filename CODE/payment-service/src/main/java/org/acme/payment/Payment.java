@@ -1,16 +1,20 @@
 package org.acme.payment;
 
+import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-public class Payment {
+@Entity
+public class Payment extends PanacheEntity {
 
     public enum PaymentStatus {
         PENDING, COMPLETED, FAILED, REFUNDED
     }
 
-    private String id;
     private String orderId;
     private String userId;
     private BigDecimal amount;
@@ -23,22 +27,13 @@ public class Payment {
         this.status = PaymentStatus.PENDING;
     }
 
-    public Payment(String id, String orderId, String userId, BigDecimal amount, String paymentMethod, LocalDateTime paymentDate, PaymentStatus status) {
-        this.id = id;
+    public Payment(String orderId, String userId, BigDecimal amount, String paymentMethod, LocalDateTime paymentDate, PaymentStatus status) {
         this.orderId = orderId;
         this.userId = userId;
         this.amount = amount;
         this.paymentMethod = paymentMethod;
         this.paymentDate = paymentDate;
         this.status = status;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public String getOrderId() {
@@ -105,11 +100,11 @@ public class Payment {
     @Override
     public String toString() {
         return "Payment{" +
-               "id='" + id + ''' +
-               ", orderId='" + orderId + ''' +
-               ", userId='" + userId + ''' +
+               "id='" + id + '\'' +
+               ", orderId='" + orderId + '\'' +
+               ", userId='" + userId + '\'' +
                ", amount=" + amount +
-               ", paymentMethod='" + paymentMethod + ''' +
+               ", paymentMethod='" + paymentMethod + '\'' +
                ", paymentDate=" + paymentDate +
                ", status=" + status +
                '}';
