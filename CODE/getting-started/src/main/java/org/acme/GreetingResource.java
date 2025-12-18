@@ -1,5 +1,6 @@
 package org.acme;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -12,5 +13,13 @@ public class GreetingResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String hello() {
         return "Hello from Quarkus REST";
+    }
+
+    @GET
+    @Path("/secured")
+    @RolesAllowed("user")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String securedHello() {
+        return "Hello from secured Quarkus REST";
     }
 }
