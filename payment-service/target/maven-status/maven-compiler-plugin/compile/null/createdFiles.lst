@@ -1,0 +1,4 @@
+org\acme\payment\PaymentRepository.class
+org\acme\payment\Payment.class
+org\acme\payment\PaymentResource.class
+org\acme\payment\Payment$PaymentStatus.class
